@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Git / od środka — interaktywne laboratorium</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237161dc'/%3E%3Cpath d='M10 8v16M10 16h7l5-6' stroke='white' stroke-width='2' fill='none'/%3E%3Ccircle cx='10' cy='8' r='3' fill='white'/%3E%3Ccircle cx='10' cy='24' r='3' fill='white'/%3E%3Ccircle cx='22' cy='10' r='3' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="i18n.js" defer></script>
+  <script src="git-engine.js" defer></script>
+  <script src="graph.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="#" aria-label="Git od środka — strona główna"><span data-icon="branch" class="brand-icon"></span><strong>git <span>/ od środka</span></strong></a>
+    <nav aria-label="Pomoc i ustawienia">
+      <div class="language-switch" role="group" aria-label="Język interfejsu">
+        <button type="button" class="language-button" data-language="pl" aria-label="Polski" aria-pressed="true" title="Polski">PL</button>
+        <button type="button" class="language-button" data-language="en" aria-label="Angielski" aria-pressed="false" title="Angielski">EN</button>
+      </div>
+      <button id="help-button" class="button secondary" aria-label="Jak to działa?"><span data-icon="book"></span>Jak to działa?</button>
+      <button id="reset-button" class="button secondary" aria-label="Zacznij od nowa"><span data-icon="reset"></span><span>Zacznij od nowa</span></button>
+    </nav>
+  </header>
+  <main>
+    <div class="intro">
+      <h1>Zobacz, co dzieje się w Git.</h1>
+      <p>Edytuj pliki, dodawaj je do staging area i twórz commity, aby zobaczyć, jak Git przechowuje Twoje dane.</p>
+    </div>
+    <section class="pipeline" aria-label="Przepływ zmian w Git">
+      <section class="stage working-stage" id="working-stage">
+        <div class="stage-heading"><span class="step-number">01</span><h2>Working tree</h2><span class="stage-count" id="working-count"></span></div>
+        <p class="stage-description">Tutaj edytujesz pliki w swoim projekcie.</p>
+        <div class="stage-files" id="working-changes"></div>
+        <div class="stage-bottom"><span class="muted" id="working-hint"></span><button id="stage-all" class="button compact primary"><span data-icon="arrow-right"></span>Dodaj wszystkie</button></div>
+      </section>
+      <span class="flow-arrow" data-icon="arrow-right" aria-hidden="true"></span>
+      <section class="stage index-stage" id="index-stage">
+        <div class="stage-heading"><span class="step-number">02</span><h2>Staging area</h2><span class="stage-count" id="staged-count"></span></div>
+        <p class="stage-description">Wersje plików do następnego commita.</p>
+        <div class="stage-files" id="staged-changes"></div>
+        <form id="commit-form" class="commit-form"><label class="sr-only" for="commit-message">Wiadomość commita</label><input id="commit-message" name="message" placeholder="Wiadomość commita…" maxlength="240" autocomplete="off"><button id="commit-button" class="button primary compact" type="submit"><span data-icon="commit"></span>Commit</button></form>
+      </section>
+      <span class="flow-arrow" data-icon="arrow-right" aria-hidden="true"></span>
+      <section class="stage repository-stage" id="repository-stage">
+        <div class="stage-heading"><span class="step-number">03</span><h2>Repozytorium .git</h2><span class="stage-count" id="commit-count"></span></div>
+        <p class="stage-description">Twój projekt zapisany jako historia commitów.</p>
+        <div id="latest-commit"></div>
+        <div class="stage-bottom"><span class="muted" id="object-count"></span><span class="mono muted">.git/objects</span></div>
+      </section>
+    </section>
+    <div class="workspace">
+      <aside class="files-column" aria-label="Pliki projektu">
+        <section class="file-panel panel">
+          <div class="file-toolbar"><h2><span data-icon="folder" class="purple"></span>moj-projekt/</h2><div><button id="new-file" class="button compact secondary"><span data-icon="plus"></span>Plik</button><button id="new-folder" class="button compact secondary"><span data-icon="plus"></span>Folder</button></div></div>
+          <div id="file-tree" class="file-tree" aria-label="Drzewo plików"></div>
+          <p class="folder-tip" id="folder-tip" hidden>Git nie śledzi pustych folderów.</p>
+        </section>
+        <section class="editor-panel panel" aria-label="Edytor pliku">
+          <div class="panel-bar"><h2 id="editor-title"></h2><div class="editor-actions"><span id="editor-status" class="muted"></span><button id="rename-path" class="icon-button" aria-label="Zmień nazwę lub ścieżkę" title="Zmień nazwę lub ścieżkę"><span data-icon="edit"></span></button><button id="delete-path" class="icon-button" aria-label="Usuń wybrany plik lub folder" title="Usuń wybrany plik lub folder"><span data-icon="trash"></span></button></div></div>
+          <div class="code-editor"><div id="line-numbers" class="line-numbers" aria-hidden="true"></div><textarea id="file-content" aria-label="Zawartość pliku" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
+          <div class="editor-footer"><button id="save-file" class="button primary compact"><span data-icon="save"></span>Zapisz zmiany</button><span id="save-hint" class="muted">Ctrl / ⌘ + S</span></div>
+        </section>
+      </aside>
+      <div class="graph-column">
+        <section class="graph-panel panel" aria-label="Baza danych Git">
+          <div class="graph-heading"><div><h2>Graf obiektów .git</h2><p>Każdy commit to migawka Twojego projektu.</p></div><div class="branch-controls"><label class="sr-only" for="branch-select">Aktualna gałąź</label><span data-icon="branch"></span><select id="branch-select"></select><button id="new-branch" class="icon-button" aria-label="Utwórz gałąź" title="Utwórz gałąź"><span data-icon="plus"></span></button></div></div>
+          <div class="graph-tabs" role="tablist" aria-label="Widok grafu"><button id="objects-tab" role="tab" aria-selected="true" aria-controls="graph-viewport">Obiekty</button><button id="history-tab" role="tab" aria-selected="false" aria-controls="graph-viewport">Historia</button><span id="graph-caption" class="muted">Kliknij obiekt, aby zajrzeć do środka</span></div>
+          <div id="graph-viewport" class="graph-viewport" role="tabpanel" aria-label="Interaktywny graf obiektów Git" tabindex="0"><div id="graph-sizer"><svg id="git-graph" xmlns="http://www.w3.org/2000/svg" aria-label="HEAD, gałęzie, commity, drzewa i bloby"></svg></div></div>
+          <div class="graph-footer"><div class="legend" aria-label="Legenda"><span><i class="legend-head"></i>HEAD</span><span><i class="legend-branch"></i>branch <em>gałąź</em></span><span><i class="legend-commit"></i>commit <em>migawka</em></span><span><i class="legend-tree"></i>tree <em>folder</em></span><span><i class="legend-blob"></i>blob <em>treść pliku</em></span></div><div class="zoom-controls"><button id="zoom-out" class="icon-button" aria-label="Pomniejsz graf"><span data-icon="minus"></span></button><span id="zoom-label">100%</span><button id="zoom-in" class="icon-button" aria-label="Powiększ graf"><span data-icon="plus"></span></button><button id="zoom-fit" class="icon-button" aria-label="Dopasuj graf do okna"><span data-icon="maximize"></span></button></div></div>
+        </section>
+        <section class="inspector-panel panel" aria-label="Podgląd obiektu">
+          <div class="panel-bar"><h2 id="inspector-title"></h2><span id="inspector-meta" class="mono muted"></span></div>
+          <div id="inspector-content" class="inspector-content"></div>
+        </section>
+      </div>
+    </div>
+    <section class="activity-bar" aria-label="Ostatnia operacja"><span data-icon="terminal" class="purple"></span><code id="last-command"></code><span id="last-description"></span><button id="undo-button" class="button compact secondary" disabled><span data-icon="undo"></span>Cofnij</button><button id="activity-button" class="icon-button" aria-label="Pokaż dziennik operacji" title="Dziennik operacji"><span data-icon="list"></span></button></section>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="app-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title"></h2><button id="close-dialog" class="icon-button" aria-label="Zamknij okno"><span data-icon="close"></span></button></div><div id="dialog-content"></div></dialog>
+</body>
+</html>
